@@ -8,6 +8,21 @@ const getHeaders = () => {
   };
 };
 
+const handleResponse = async (response: Response) => {
+  const result = await response.json().catch(() => ({}));
+  
+  if (!response.ok) {
+    if (response.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      window.location.href = '/login';
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+    throw new Error(result.message || result.error || 'Erro na requisição');
+  }
+  return result;
+};
+
 export const api = {
   async post(endpoint: string, data: any) {
     const response = await fetch(`${API_URL}${endpoint}`, {
@@ -15,18 +30,14 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(data)
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Erro na requisição');
-    return result;
+    return handleResponse(response);
   },
 
   async get(endpoint: string) {
     const response = await fetch(`${API_URL}${endpoint}`, {
       headers: getHeaders()
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Erro na requisição');
-    return result;
+    return handleResponse(response);
   },
 
   async delete(endpoint: string) {
@@ -34,9 +45,7 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders()
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Erro na requisição');
-    return result;
+    return handleResponse(response);
   },
 
   async put(endpoint: string, data: any) {
@@ -45,8 +54,6 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(data)
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'Erro na requisição');
-    return result;
+    return handleResponse(response);
   }
 };

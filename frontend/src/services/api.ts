@@ -8,11 +8,11 @@ const getHeaders = () => {
   };
 };
 
-const handleResponse = async (response: Response) => {
+const handleResponse = async (response: Response, endpoint?: string) => {
   const result = await response.json().catch(() => ({}));
   
   if (!response.ok) {
-    if (response.status === 401) {
+    if (response.status === 401 && endpoint !== '/auth/login') {
       localStorage.removeItem('token');
       localStorage.removeItem('role');
       window.location.href = '/login';
@@ -30,14 +30,14 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(data)
     });
-    return handleResponse(response);
+    return handleResponse(response, endpoint);
   },
 
   async get(endpoint: string) {
     const response = await fetch(`${API_URL}${endpoint}`, {
       headers: getHeaders()
     });
-    return handleResponse(response);
+    return handleResponse(response, endpoint);
   },
 
   async delete(endpoint: string) {
@@ -45,7 +45,7 @@ export const api = {
       method: 'DELETE',
       headers: getHeaders()
     });
-    return handleResponse(response);
+    return handleResponse(response, endpoint);
   },
 
   async put(endpoint: string, data: any) {
@@ -54,6 +54,6 @@ export const api = {
       headers: getHeaders(),
       body: JSON.stringify(data)
     });
-    return handleResponse(response);
+    return handleResponse(response, endpoint);
   }
 };

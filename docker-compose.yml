@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: clickbeard_db
+    restart: always
+    environment:
+      POSTGRES_USER: clickbeard_user
+      POSTGRES_PASSWORD: clickbeard_password
+      POSTGRES_DB: clickbeard_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: clickbeard_backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://clickbeard_user:clickbeard_password@db:5432/clickbeard_db?schema=public
+      - PORT=3001
+      - JWT_SECRET=super_secret_jwt_key_clickbeard
+      - TZ=America/Sao_Paulo
+    depends_on:
+      - db
+    # In development, we can mount volumes, but for the final build we use the image
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: clickbeard_frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3001/api
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

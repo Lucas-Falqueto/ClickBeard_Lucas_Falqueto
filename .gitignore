@@ -1,0 +1,38 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build e Output
+dist/
+build/
+.tsc-build
+
+# Variáveis de Ambiente e Segredos
+.env
+.env.*.local
+*.pem
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+*.swp
+
+# Docker
+docker-compose.override.yml
+postgres_data/
+
+# IDE e Editor
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.gemini/
+.antigravity/
+
+# Prisma
+backend/prisma/migrations/sqlite*
+backend/prisma/*.db

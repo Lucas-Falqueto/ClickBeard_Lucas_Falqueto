@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  password     String
+  role         Role          @default(CLIENT)
+  createdAt    DateTime      @default(now())
+  appointments Appointment[]
+}
+
+model Barber {
+  id           String             @id @default(uuid())
+  name         String
+  age          Int
+  hiringDate   DateTime
+  createdAt    DateTime           @default(now())
+  specialties  BarberSpecialty[]
+  appointments Appointment[]
+}
+
+model Specialty {
+  id           String             @id @default(uuid())
+  name         String             @unique
+  description  String?
+  barbers      BarberSpecialty[]
+  appointments Appointment[]
+}
+
+model BarberSpecialty {
+  id          String    @id @default(uuid())
+  barberId    String
+  specialtyId String
+  barber      Barber    @relation(fields: [barberId], references: [id])
+  specialty   Specialty @relation(fields: [specialtyId], references: [id])
+
+  @@unique([barberId, specialtyId])
+}
+
+model Appointment {
+  id              String    @id @default(uuid())
+  userId          String
+  barberId        String
+  specialtyId     String
+  scheduledAt     DateTime
+  durationMinutes Int       @default(30)
+  status          String    @default("scheduled") // 'scheduled', 'cancelled', 'completed'
+  createdAt       DateTime  @default(now())
+  cancelledAt     DateTime?
+
+  user      User      @relation(fields: [userId], references: [id])
+  barber    Barber    @relation(fields: [barberId], references: [id])
+  specialty Specialty @relation(fields: [specialtyId], references: [id])
+}

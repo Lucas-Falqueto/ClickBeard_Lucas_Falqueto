@@ -55,5 +55,14 @@ export const api = {
       body: JSON.stringify(data)
     });
     return handleResponse(response, endpoint);
+  },
+
+  async patch(endpoint: string, data: any) {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data)
+    });
+    return handleResponse(response, endpoint);
   }
 };

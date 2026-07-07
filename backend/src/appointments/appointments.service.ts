@@ -76,21 +76,21 @@ export class AppointmentsService {
     });
   }
 
-  async deactivateAppointment(id: string, userId: string) {
+  async deactivateAppointment(id: string, userId: string, role?: string) {
     const appointment = await this.prisma.appointment.findUnique({ where: { id } });
 
     if (!appointment) throw new NotFoundException('Agendamento não encontrado');
-    if (appointment.userId !== userId) throw new ForbiddenException('Acesso negado');
+    if (role !== 'ADMIN' && appointment.userId !== userId) throw new ForbiddenException('Acesso negado');
     if (appointment.status !== 'scheduled') throw new BadRequestException('Agendamento não está ativo');
 
     const now = new Date();
     const diffInMinutes = (appointment.scheduledAt.getTime() - now.getTime()) / (1000 * 60);
     
-    if (diffInMinutes < 0) {
+    if (role !== 'ADMIN' && diffInMinutes < 0) {
       throw new BadRequestException('Você não pode cancelar um agendamento que já passou.');
     }
 
-    if (diffInMinutes < 120) {
+    if (role !== 'ADMIN' && diffInMinutes < 120) {
       throw new BadRequestException('Cancelamento permitido apenas com 2 horas de antecedência.');
     }
 
@@ -100,24 +100,98 @@ export class AppointmentsService {
     });
   }
 
-  async fetchAdminTodayAppointments() {
-    const start = startOfDay(new Date());
-    const end = endOfDay(new Date());
+  async completeAppointment(id: string, role?: string) {
+    if (role !== 'ADMIN') throw new ForbiddenException('Apenas administradores podem concluir agendamentos');
     
-    return await this.prisma.appointment.findMany({
-      where: { scheduledAt: { gte: start, lte: end } },
-      include: { user: true, barber: true, specialty: true },
-      orderBy: { scheduledAt: 'asc' }
+    const appointment = await this.prisma.appointment.findUnique({ where: { id } });
+    if (!appointment) throw new NotFoundException('Agendamento não encontrado');
+    if (appointment.status !== 'scheduled') throw new BadRequestException('Apenas agendamentos ativos podem ser concluídos');
+
+    return await this.prisma.appointment.update({
+      where: { id },
+      data: { status: 'completed' }
     });
   }
 
-  async fetchAdminFutureAppointments() {
+  async fetchAdminTodayAppointments(page: number = 1, limit: number = 10, clientName?: string, status?: string) {
+    const start = startOfDay(new Date());
+    const end = endOfDay(new Date());
+    
+    const where: any = { scheduledAt: { gte: start, lte: end } };
+    if (clientName) {
+      where.user = { name: { contains: clientName, mode: 'insensitive' } };
+    }
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.appointment.findMany({
+        where,
+        include: { user: true, barber: true, specialty: true },
+        orderBy: { scheduledAt: 'asc' },
+        skip,
+        take: limit
+      }),
+      this.prisma.appointment.count({ where })
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  async fetchAdminFutureAppointments(page: number = 1, limit: number = 10, clientName?: string, status?: string, date?: string) {
     const start = endOfDay(new Date());
     
-    return await this.prisma.appointment.findMany({
-      where: { scheduledAt: { gt: start } },
-      include: { user: true, barber: true, specialty: true },
-      orderBy: { scheduledAt: 'asc' }
-    });
+    const where: any = {};
+    
+    if (date) {
+      const targetDate = parseISO(date);
+      where.scheduledAt = { 
+        gte: startOfDay(targetDate), 
+        lte: endOfDay(targetDate) 
+      };
+    } else {
+      where.scheduledAt = { gt: start };
+    }
+
+    if (clientName) {
+      where.user = { name: { contains: clientName, mode: 'insensitive' } };
+    }
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.appointment.findMany({
+        where,
+        include: { user: true, barber: true, specialty: true },
+        orderBy: { scheduledAt: 'asc' },
+        skip,
+        take: limit
+      }),
+      this.prisma.appointment.count({ where })
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
   }
 }

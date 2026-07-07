@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, UseGuards, Request, Patch } from '@nestjs/common';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentDto } from './dto/appointment.dto';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -37,24 +37,47 @@ export class AppointmentsController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Cancela um agendamento do usuário' })
+  @ApiOperation({ summary: 'Cancela um agendamento' })
   async deactivate(@Request() req: any, @Param('id') id: string) {
-    return this.appointmentsService.deactivateAppointment(id, req.user.id);
+    return this.appointmentsService.deactivateAppointment(id, req.user.id, req.user.role);
+  }
+
+  @Patch(':id/complete')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Marca um agendamento como concluído (Apenas Admin)' })
+  async complete(@Request() req: any, @Param('id') id: string) {
+    return this.appointmentsService.completeAppointment(id, req.user.role);
   }
 
   @Get('admin/today')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Lista agendamentos de hoje de todos os clientes (Apenas Admin)' })
-  async getAdminToday() {
-    return this.appointmentsService.fetchAdminTodayAppointments();
+  async getAdminToday(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('clientName') clientName?: string,
+    @Query('status') status?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    return this.appointmentsService.fetchAdminTodayAppointments(pageNum, limitNum, clientName, status);
   }
 
   @Get('admin/future')
   @UseGuards(RolesGuard)
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Lista agendamentos futuros de todos os clientes (Apenas Admin)' })
-  async getAdminFuture() {
-    return this.appointmentsService.fetchAdminFutureAppointments();
+  async getAdminFuture(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('clientName') clientName?: string,
+    @Query('status') status?: string,
+    @Query('date') date?: string,
+  ) {
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 10;
+    return this.appointmentsService.fetchAdminFutureAppointments(pageNum, limitNum, clientName, status, date);
   }
 }

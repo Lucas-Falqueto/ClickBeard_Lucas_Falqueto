@@ -6,8 +6,7 @@ import SpecialtiesTab from '../components/admin/SpecialtiesTab';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'appointments' | 'barbers' | 'specialties'>('appointments');
-  const [today, setToday] = useState<any[]>([]);
-  const [future, setFuture] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -23,14 +22,10 @@ export default function AdminDashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [todayData, futureData, barbersData, specialtiesData] = await Promise.all([
-        api.get('/appointments/admin/today'),
-        api.get('/appointments/admin/future'),
+      const [barbersData, specialtiesData] = await Promise.all([
         api.get('/barbers'),
         api.get('/specialties')
       ]);
-      setToday(todayData);
-      setFuture(futureData);
       setBarbers(barbersData);
       setSpecialties(specialtiesData);
     } catch (err: any) {
@@ -96,7 +91,7 @@ export default function AdminDashboard() {
       {success && <div className="animate-fade-in" style={{ background: 'var(--success)', padding: '1rem', borderRadius: 'var(--border-radius-sm)', marginBottom: '2rem', textAlign: 'center', color: '#fff', fontWeight: 500 }}>{success}</div>}
 
       {activeTab === 'appointments' && (
-        <AppointmentsTab today={today} future={future} />
+        <AppointmentsTab />
       )}
 
       {activeTab === 'barbers' && !loading && (

@@ -6,13 +6,20 @@ services:
     container_name: clickbeard_db
     restart: always
     environment:
-      POSTGRES_USER: clickbeard_user
-      POSTGRES_PASSWORD: clickbeard_password
-      POSTGRES_DB: clickbeard_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clickbeard
 
   backend:
     build:
@@ -21,15 +28,22 @@ services:
     container_name: clickbeard_backend
     restart: always
     ports:
-      - "3001:3001"
+      - "${BACKEND_PORT:-3001}:${BACKEND_PORT:-3001}"
     environment:
-      - DATABASE_URL=postgresql://clickbeard_user:clickbeard_password@db:5432/clickbeard_db?schema=public
-      - PORT=3001
-      - JWT_SECRET=super_secret_jwt_key_clickbeard
-      - TZ=America/Sao_Paulo
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      - PORT=${BACKEND_PORT:-3001}
+      - JWT_SECRET=${JWT_SECRET}
+      - TZ=${TZ:-America/Sao_Paulo}
     depends_on:
-      - db
-    # In development, we can mount volumes, but for the final build we use the image
+      db:
+        condition: service_healthy
+    networks:
+      - clickbeard
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:${BACKEND_PORT:-3001}/api-docs || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:
@@ -38,11 +52,18 @@ services:
     container_name: clickbeard_frontend
     restart: always
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-5173}:${FRONTEND_PORT:-5173}"
     environment:
-      - VITE_API_URL=http://localhost:3001/api
+      - VITE_API_URL=http://localhost:${BACKEND_PORT:-3001}/api
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - clickbeard
 
 volumes:
   pgdata:
+
+networks:
+  clickbeard:
+    driver: bridge

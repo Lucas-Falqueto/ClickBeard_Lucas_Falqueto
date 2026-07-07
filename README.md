@@ -8,13 +8,6 @@ Sistema completo de agendamento para barbearia.
 - **Banco de Dados:** PostgreSQL 15
 - **Infraestrutura:** Docker e Docker Compose
 
-## Arquitetura (Padrão Pleno/Sênior)
-Este projeto foi construído seguindo boas práticas de engenharia de software para garantir escalabilidade e segurança:
-- **Clean Architecture (Service Layer):** Toda a regra de negócio está isolada em `services/`, deixando os Controllers responsáveis apenas pelo roteamento HTTP.
-- **RBAC (Role-Based Access Control):** Sistema de permissões por cargos (ADMIN/CLIENT) protegendo rotas sensíveis (ex: Deleção de barbeiros).
-- **Validação Rigorosa (Zod):** Todos os payloads (`req.body`) são interceptados e validados pelo Zod antes de tocarem a lógica do banco de dados, prevenindo injeções e erros de formatação.
-- **Frontend Componentizado:** Interface limpa no React, sem "God Components", dividindo lógicas em pequenas *Tabs* e modais gerenciáveis.
-
 ## Pré-requisitos
 - Docker e Docker Compose instalados
 - Node.js 18+ (apenas se for rodar localmente sem Docker)

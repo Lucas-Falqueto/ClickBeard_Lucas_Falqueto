@@ -63,4 +63,8 @@ model Appointment {
   user      User      @relation(fields: [userId], references: [id])
   barber    Barber    @relation(fields: [barberId], references: [id])
   specialty Specialty @relation(fields: [specialtyId], references: [id])
+
+  @@index([userId])
+  @@index([barberId])
+  @@index([scheduledAt])
 }

@@ -8,7 +8,7 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const token = this.extractTokenFromHeader(request);
+    const token = this.extractToken(request);
 
     if (!token) {
       throw new UnauthorizedException('Token não fornecido');
@@ -24,7 +24,12 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
+  private extractToken(request: Request): string | undefined {
+    // 1. Prioriza o cookie HttpOnly (mais seguro)
+    const cookieToken = (request.cookies as any)?.token;
+    if (cookieToken) return cookieToken;
+
+    // 2. Fallback para Authorization header (compatibilidade com Swagger/testes)
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }

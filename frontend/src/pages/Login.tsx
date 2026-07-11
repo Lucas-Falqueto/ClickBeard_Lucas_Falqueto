@@ -15,9 +15,12 @@ export default function Login() {
     e.preventDefault();
     try {
       setError('');
-      const res = await api.post('/auth/login', { email, password });
-      login(res.token, res.user);
-      navigate(res.user.email === 'admin@clickbeard.com' ? '/admin' : '/dashboard');
+      interface LoginResponse {
+        user: { id: string; name: string; email: string; role: 'ADMIN' | 'CLIENT' };
+      }
+      const res = await api.post<LoginResponse>('/auth/login', { email, password });
+      login(res.user);
+      navigate(res.user.role === 'ADMIN' ? '/admin' : '/dashboard');
     } catch (err: any) {
       setError(err.message);
     }

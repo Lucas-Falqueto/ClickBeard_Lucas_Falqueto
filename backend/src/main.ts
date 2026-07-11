@@ -3,13 +3,17 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
-  console.log('DATABASE_URL IS:', process.env.DATABASE_URL);
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
-  app.enableCors();
+  app.use(cookieParser());
+  app.enableCors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  });
   app.use(morgan('dev'));
 
   const config = new DocumentBuilder()

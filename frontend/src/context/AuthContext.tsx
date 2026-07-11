@@ -1,17 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-import { jwtDecode } from 'jwt-decode';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 interface User {
   id: string;
   name: string;
   email: string;
+  role: 'ADMIN' | 'CLIENT';
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (token: string, user: User) => void;
-  logout: () => void;
+  login: (user: User) => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
 }
@@ -20,36 +21,45 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // Ao carregar a app, tenta restaurar a sessão pelo cookie HttpOnly via /auth/me
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
+    const restoreSession = async () => {
       try {
-        const decoded: any = jwtDecode(token);
-        if (decoded.exp * 1000 < Date.now()) {
-          logout();
-        } else {
-          setUser(JSON.parse(storedUser));
+        const response = await fetch(`${API_URL}/auth/me`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUser(data.user);
         }
       } catch {
-        logout();
+        // sem sessão ativa, permanece como não autenticado
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+    restoreSession();
   }, []);
 
-  const login = (token: string, user: User) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+  const login = (user: User) => {
     setUser(user);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
+  const logout = async () => {
+    try {
+      await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } finally {
+      setUser(null);
+    }
   };
+
+  // Evita flash de tela de login enquanto verifica o cookie
+  if (loading) return null;
 
   return (
     <AuthContext.Provider value={{
@@ -57,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login,
       logout,
       isAuthenticated: !!user,
-      isAdmin: user?.email === 'admin@clickbeard.com'
+      isAdmin: user?.role === 'ADMIN'
     }}>
       {children}
     </AuthContext.Provider>

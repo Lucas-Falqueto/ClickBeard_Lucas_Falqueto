@@ -1,68 +1,52 @@
+import axios from 'axios';
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
-const getHeaders = () => {
-  const token = localStorage.getItem('token');
-  return {
+const axiosInstance = axios.create({
+  baseURL: API_URL,
+  withCredentials: true, // envia o cookie HttpOnly em todas as requisições
+  headers: {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {})
-  };
-};
+  },
+});
 
-const handleResponse = async (response: Response, endpoint?: string) => {
-  const result = await response.json().catch(() => ({}));
-  
-  if (!response.ok) {
-    if (response.status === 401 && endpoint !== '/auth/login') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('role');
+// Interceptor de resposta: "desempacota" response.data e redireciona em 401
+axiosInstance.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    const status = error.response?.status;
+    const url: string = error.config?.url ?? '';
+
+    if (status === 401 && !url.includes('/auth/login') && !url.includes('/auth/me')) {
       window.location.href = '/login';
-      throw new Error('Sessão expirada. Faça login novamente.');
+      return Promise.reject(new Error('Sessão expirada. Faça login novamente.'));
     }
-    throw new Error(result.message || result.error || 'Erro na requisição');
-  }
-  return result;
-};
 
+    const message =
+      error.response?.data?.message ||
+      error.response?.data?.error ||
+      error.message ||
+      'Erro na requisição';
+
+    return Promise.reject(new Error(message));
+  },
+);
+
+// Wrapper tipado: o segundo generic <T, T> informa ao TypeScript que o retorno
+// real é T (e não AxiosResponse<T>), refletindo o que o interceptor faz em runtime.
 export const api = {
-  async post(endpoint: string, data: any) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(data)
-    });
-    return handleResponse(response, endpoint);
-  },
+  get: <T = any>(url: string) =>
+    axiosInstance.get<T, T>(url),
 
-  async get(endpoint: string) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      headers: getHeaders()
-    });
-    return handleResponse(response, endpoint);
-  },
+  post: <T = any>(url: string, data?: unknown) =>
+    axiosInstance.post<T, T>(url, data),
 
-  async delete(endpoint: string) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      method: 'DELETE',
-      headers: getHeaders()
-    });
-    return handleResponse(response, endpoint);
-  },
+  put: <T = any>(url: string, data?: unknown) =>
+    axiosInstance.put<T, T>(url, data),
 
-  async put(endpoint: string, data: any) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify(data)
-    });
-    return handleResponse(response, endpoint);
-  },
+  patch: <T = any>(url: string, data?: unknown) =>
+    axiosInstance.patch<T, T>(url, data),
 
-  async patch(endpoint: string, data: any) {
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify(data)
-    });
-    return handleResponse(response, endpoint);
-  }
+  delete: <T = any>(url: string) =>
+    axiosInstance.delete<T, T>(url),
 };

@@ -36,10 +36,15 @@ export default function AppointmentsList({ type }: AppointmentsListProps) {
       if (status !== 'all') params.append('status', status);
       if (dateFilter && type === 'future') params.append('date', dateFilter);
 
-      const response = await api.get(`${endpoint}?${params.toString()}`);
+      interface PaginatedResponse {
+        data: any[];
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      }
+
+      const result = await api.get<PaginatedResponse>(`${endpoint}?${params.toString()}`);
       
-      setAppointments(response.data || []);
-      setTotalPages(response.meta?.totalPages || 1);
+      setAppointments(result.data || []);
+      setTotalPages(result.meta?.totalPages || 1);
     } catch (err: any) {
       setError(err.message || 'Erro ao buscar agendamentos');
     } finally {

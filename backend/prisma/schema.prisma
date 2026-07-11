@@ -11,6 +11,12 @@ enum Role {
   CLIENT
 }
 
+enum AppointmentStatus {
+  scheduled
+  cancelled
+  completed
+}
+
 model User {
   id           String        @id @default(uuid())
   name         String
@@ -56,7 +62,7 @@ model Appointment {
   specialtyId     String
   scheduledAt     DateTime
   durationMinutes Int       @default(30)
-  status          String    @default("scheduled") // 'scheduled', 'cancelled', 'completed'
+  status          AppointmentStatus @default(scheduled)
   createdAt       DateTime  @default(now())
   cancelledAt     DateTime?
 

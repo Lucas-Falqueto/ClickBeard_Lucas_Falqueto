@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AppointmentStatus } from '@prisma/client';
 import { addMinutes, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 @Injectable()
@@ -14,7 +15,7 @@ export class AppointmentsService {
     const appointments = await this.prisma.appointment.findMany({
       where: {
         barberId,
-        status: 'scheduled',
+        status: AppointmentStatus.scheduled,
         scheduledAt: { gte: start, lte: end }
       }
     });
@@ -46,7 +47,7 @@ export class AppointmentsService {
     const conflict = await this.prisma.appointment.findFirst({
       where: {
         barberId,
-        status: 'scheduled',
+        status: AppointmentStatus.scheduled,
         scheduledAt: date
       }
     });
@@ -81,7 +82,7 @@ export class AppointmentsService {
 
     if (!appointment) throw new NotFoundException('Agendamento não encontrado');
     if (role !== 'ADMIN' && appointment.userId !== userId) throw new ForbiddenException('Acesso negado');
-    if (appointment.status !== 'scheduled') throw new BadRequestException('Agendamento não está ativo');
+    if (appointment.status !== AppointmentStatus.scheduled) throw new BadRequestException('Agendamento não está ativo');
 
     const now = new Date();
     const diffInMinutes = (appointment.scheduledAt.getTime() - now.getTime()) / (1000 * 60);
@@ -96,7 +97,7 @@ export class AppointmentsService {
 
     return await this.prisma.appointment.update({
       where: { id },
-      data: { status: 'cancelled', cancelledAt: new Date() }
+      data: { status: AppointmentStatus.cancelled, cancelledAt: new Date() }
     });
   }
 
@@ -105,11 +106,11 @@ export class AppointmentsService {
     
     const appointment = await this.prisma.appointment.findUnique({ where: { id } });
     if (!appointment) throw new NotFoundException('Agendamento não encontrado');
-    if (appointment.status !== 'scheduled') throw new BadRequestException('Apenas agendamentos ativos podem ser concluídos');
+    if (appointment.status !== AppointmentStatus.scheduled) throw new BadRequestException('Apenas agendamentos ativos podem ser concluídos');
 
     return await this.prisma.appointment.update({
       where: { id },
-      data: { status: 'completed' }
+      data: { status: AppointmentStatus.completed }
     });
   }
 
@@ -122,7 +123,7 @@ export class AppointmentsService {
       where.user = { name: { contains: clientName, mode: 'insensitive' } };
     }
     if (status && status !== 'all') {
-      where.status = status;
+      where.status = status as AppointmentStatus;
     }
 
     const skip = (page - 1) * limit;
@@ -168,7 +169,7 @@ export class AppointmentsService {
       where.user = { name: { contains: clientName, mode: 'insensitive' } };
     }
     if (status && status !== 'all') {
-      where.status = status;
+      where.status = status as AppointmentStatus;
     }
 
     const skip = (page - 1) * limit;
